@@ -531,11 +531,12 @@ document.getElementsByTagName('head')[0].appendChild(style);
 <li>自訂函數與 <code>%&gt;%</code> 負責篩選資料</li>
 <li><code>ggplot2</code> 套件負責繪圖做人為判斷</li>
 </ul>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">&quot;rvest&quot;</span>, <span class="st">&quot;jsonlite&quot;</span>, <span class="st">&quot;lubridate&quot;</span>, <span class="st">&quot;ggplot2&quot;</span>))
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">&quot;rvest&quot;</span>, <span class="st">&quot;jsonlite&quot;</span>, <span class="st">&quot;lubridate&quot;</span>, <span class="st">&quot;ggplot2&quot;</span>, <span class="st">&quot;magrittr&quot;</span>))
 <span class="kw">library</span>(rvest)
 <span class="kw">library</span>(jsonlite)
 <span class="kw">library</span>(lubridate)
-<span class="kw">library</span>(ggplot2)</code></pre></div>
+<span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(magrittr)</code></pre></div>
 </section><section class="slide level2">
 <h2>股價前一百名</h2>
 <p><a href="https://tw.stock.yahoo.com/">Yahoo! 奇摩股市</a></p>
@@ -815,11 +816,117 @@ document.getElementsByTagName('head')[0].appendChild(style);
 <span class="st">    </span><span class="kw">html_text</span>() <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">gsub</span>(<span class="dt">pattern =</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>, ., <span class="dt">replacement =</span> <span class="st">&quot;&quot;</span>)
   high_low &lt;-<span class="st"> </span>stock_values[<span class="dv">2</span>] <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">strsplit</span>(<span class="dt">split =</span> <span class="st">&quot; - &quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">gsub</span>(<span class="dt">pattern =</span> <span class="st">&quot;,&quot;</span>, ., <span class="dt">replacement =</span> <span class="st">&quot;&quot;</span>)
+    <span class="kw">strsplit</span>(<span class="dt">split =</span> <span class="st">&quot; - &quot;</span>) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">unlist</span>() <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">as.numeric</span>()
   <span class="kw">return</span>(high_low)
 }</code></pre></div>
+</section></section>
+<section><section class="titleslide slide level1"><h1>將各個函數連結起來</h1></section><section class="slide level2">
+<h2>基本概念</h2>
+<ul>
+<li>原則上使用迴圈一定可以解決</li>
+</ul>
+</section><section class="slide level2">
+<h2>將每一筆觀測值挑出作為函數輸入</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get_tse_top</span>(<span class="dt">n =</span> <span class="dv">5</span>)
+is_ky &lt;-<span class="st"> </span><span class="kw">vector</span>()
+<span class="cf">for</span> (n <span class="cf">in</span> df<span class="op">$</span>name) {
+  is_ky_judge &lt;-<span class="st"> </span><span class="kw">has_ky</span>(n)
+  is_ky &lt;-<span class="st"> </span><span class="kw">c</span>(is_ky, is_ky_judge)
+}
+df<span class="op">$</span>is_ky &lt;-<span class="st"> </span>is_ky</code></pre></div>
+</section><section id="-r-" class="slide level2">
+<h2>但是在 R 語言中執行效率</h2>
+<ul>
+<li>向量計算 &gt; <code>apply()</code> &gt; 迴圈</li>
+</ul>
+</section><section class="slide level2">
+<h2>於是我們應該考慮新的方法</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df<span class="op">$</span>name <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(<span class="dt">MARGIN =</span> <span class="dv">1</span>, <span class="dt">FUN =</span> has_ky)</code></pre></div>
+</section><section class="slide level2">
+<h2>如果有不只一個輸出該怎麼辦？</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df<span class="op">$</span>ticker <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(<span class="dt">MARGIN =</span> <span class="dv">1</span>, <span class="dt">FUN =</span> get_52_w_hl)</code></pre></div>
+</section><section class="slide level2">
+<h2>大功告成！</h2>
+</section></section>
+<section><section id="-stockreenr" class="titleslide slide level1"><h1>套件 stockreenr</h1></section><section class="slide level2">
+<h2>有沒有更好聽的名稱…</h2>
+</section><section class="slide level2">
+<h2>安裝方式</h2>
+<ul>
+<li>從我的 <a href="https://github.com/yaojenkuo/stockreenr">Github repo</a> 安裝</li>
+<li>也可以查看每個函數的原始碼</li>
+</ul>
+</section><section id="-devtools-" class="slide level2">
+<h2>先安裝 devtools 套件</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)
+<span class="kw">library</span>(devtools)</code></pre></div>
+</section><section id="-install_github-" class="slide level2">
+<h2>以 <code>install_github()</code> 進行安裝</h2>
+<ul>
+<li><strong>注意</strong>跟平常安裝時使用的 <code>install.packages()</code> 不同</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install_github</span>(<span class="st">&quot;yaojenkuo/stockreenr&quot;</span>)
+<span class="kw">library</span>(stockreenr)</code></pre></div>
+</section></section>
+<section><section class="titleslide slide level1"><h1>使用方式</h1></section><section class="slide level2">
+<h2>輸出僅有一個值的函數</h2>
+<ul>
+<li><code>has_ky()</code></li>
+<li><code>get_listed_days()</code></li>
+<li><code>get_mkt_cap()</code></li>
+<li><code>get_avg_volume()</code></li>
+</ul>
+</section><section class="slide level2">
+
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get_tse_top</span>(<span class="dt">n =</span> <span class="dv">5</span>)
+<span class="co"># 注意僅有 has_ky 的輸入是公司名稱</span>
+df<span class="op">$</span>has_ky &lt;-<span class="st"> </span>df<span class="op">$</span>name <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(<span class="dt">MARGIN =</span> <span class="dv">1</span>, <span class="dt">FUN =</span> has_ky)
+<span class="co"># 其餘均是輸入股票代碼</span>
+df<span class="op">$</span>mkt_cap &lt;-<span class="st"> </span>df<span class="op">$</span>ticker <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(<span class="dt">MARGIN =</span> <span class="dv">1</span>, <span class="dt">FUN =</span> get_mkt_cap)</code></pre></div>
+</section><section class="slide level2">
+<h2>其他輸出多個值的函數</h2>
+<ul>
+<li><code>get_52_w_hl()</code></li>
+<li><code>get_eps()</code></li>
+<li><code>get_four_year_profit()</code></li>
+<li><code>get_inv_to_ratio()</code></li>
+<li><code>get_n_month_sales_yoy()</code></li>
+<li><code>get_op_income_ratio()</code></li>
+<li><code>get_three_year_free_cf()</code></li>
+</ul>
+</section><section class="slide level2">
+
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">df &lt;-<span class="st"> </span><span class="kw">get_tse_top</span>(<span class="dt">n =</span> <span class="dv">5</span>)
+hl_res &lt;-<span class="st"> </span>df<span class="op">$</span>ticker <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(<span class="dt">MARGIN =</span> <span class="dv">1</span>, <span class="dt">FUN =</span> get_52_w_hl) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">t</span>()
+df &lt;-<span class="st"> </span><span class="kw">cbind</span>(df, hl_res)</code></pre></div>
+</section><section id="-lazy_screener-" class="slide level2">
+<h2>或呼叫 <code>lazy_screener()</code> 函數</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">test_df &lt;-<span class="st"> </span><span class="kw">lazy_screener</span>()</code></pre></div>
+</section><section id="-excel-" class="slide level2">
+<h2>可以輸出至 excel 做操作</h2>
+</section></section>
+<section><section class="titleslide slide level1"><h1>如果還有時間</h1></section><section class="slide level2">
+<h2>複習如何繪畫線圖</h2>
+</section><section id="-r-markdown" class="slide level2">
+<h2>關於 R Markdown</h2>
+<ul>
+<li><a href="http://rmarkdown.rstudio.com/lesson-1.html">R Markdown</a></li>
+<li><a href="http://rmarkdown.rstudio.com/revealjs_presentation_format.html">reveal.js</a></li>
+</ul>
 </section></section>
     </div>
   </div>
